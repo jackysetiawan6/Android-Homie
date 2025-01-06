@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'dart:async';
@@ -42,12 +45,14 @@ class _HomieScreenState extends State<HomieScreen> {
     client.secure = true;
     client.logging(on: true);
 
+    ByteData rootCA = await rootBundle.load('assets/RootCA.pem');
+    ByteData deviceCert = await rootBundle.load('assets/DeviceCert.crt');
+    ByteData privateKey = await rootBundle.load('assets/Private.key');
+
     final context = SecurityContext.defaultContext;
-    context.setClientAuthorities('assets/AmazonRootCA1.pem');
-    context.useCertificateChain(
-        'assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-certificate.pem.crt');
-    context.usePrivateKey(
-        'assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-private.pem.key');
+    context.setClientAuthoritiesBytes(rootCA.buffer.asUint8List());
+    context.useCertificateChainBytes(deviceCert.buffer.asUint8List());
+    context.usePrivateKeyBytes(privateKey.buffer.asUint8List());
 
     client.securityContext = context;
     client.setProtocolV311();
@@ -82,8 +87,7 @@ class _HomieScreenState extends State<HomieScreen> {
   void onSubscribed(String topic) {
     client.updates?.listen((List<MqttReceivedMessage<MqttMessage?>>? messages) {
       final recMessage = messages![0].payload as MqttPublishMessage;
-      final payload =
-          MqttPublishPayload.bytesToStringAsString(recMessage.payload.message);
+      final payload = MqttPublishPayload.bytesToStringAsString(recMessage.payload.message);
 
       final sensorData = parseSensorData(payload);
 
@@ -140,8 +144,7 @@ class _HomieScreenState extends State<HomieScreen> {
             const SizedBox(height: 16),
             _buildSensorCard("Humidity", "$humidity %", Icons.water_drop),
             const SizedBox(height: 16),
-            _buildSensorCard("Light Intensity", "$lightIntensity Lux",
-                Icons.light_mode),
+            _buildSensorCard("Light Intensity", "$lightIntensity Lux", Icons.light_mode),
             const SizedBox(height: 32),
             const Text(
               "LED Control",

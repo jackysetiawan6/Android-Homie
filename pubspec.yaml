@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   mqtt_client: ^9.7.0
-
+  ndialog: ^4.4.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -61,9 +61,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-certificate.pem.crt
-    - assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-private.pem.key
-    - assets/AmazonRootCA1.pem
+    - assets/DeviceCert.crt
+    - assets/Private.key
+    - assets/RootCA.pem
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

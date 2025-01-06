@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'dart:async';
@@ -7,26 +8,10 @@ import 'dart:io';
 void main() {
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    theme: ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: const Color(0xFF0A0E21),
-      primaryColor: const Color(0xFF1D1F33),
-      cardColor: const Color(0xFF1D1F33),
+    theme: ThemeData(
+      primarySwatch: Colors.blue,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF0A0E21),
-        elevation: 0,
-        titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF3A3E55),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-      ),
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(color: Colors.white),
+        backgroundColor: Colors.blueAccent,
       ),
     ),
     home: const HomieScreen(),
@@ -59,11 +44,19 @@ class _HomieScreenState extends State<HomieScreen> {
     client.logging(on: true);
 
     final context = SecurityContext.defaultContext;
-    context.setClientAuthorities('assets/AmazonRootCA1.pem');
-    context.useCertificateChain(
-        'assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-certificate.pem.crt');
-    context.usePrivateKey(
-        'assets/2a824b30019e3d44560d0ca4212f8aefcbec4dd0161ffbb4d3f931329d2f8856-private.pem.key');
+
+    try {
+      ByteData rootCA = await rootBundle.load('assets/RootCA.pem');
+      ByteData deviceCert = await rootBundle.load('assets/DeviceCert.crt');
+      ByteData privateKey = await rootBundle.load('assets/Private.key');
+      context.setClientAuthoritiesBytes(rootCA.buffer.asUint8List());
+      context.useCertificateChainBytes(deviceCert.buffer.asUint8List());
+      context.usePrivateKeyBytes(privateKey.buffer.asUint8List());
+      debugPrint("Certificates loaded successfully");
+    } catch (e) {
+      debugPrint("Error loading certificates");
+      return;
+    }
 
     client.securityContext = context;
     client.setProtocolV311();
@@ -98,8 +91,7 @@ class _HomieScreenState extends State<HomieScreen> {
   void onSubscribed(String topic) {
     client.updates?.listen((List<MqttReceivedMessage<MqttMessage?>>? messages) {
       final recMessage = messages![0].payload as MqttPublishMessage;
-      final payload =
-          MqttPublishPayload.bytesToStringAsString(recMessage.payload.message);
+      final payload = MqttPublishPayload.bytesToStringAsString(recMessage.payload.message);
 
       final sensorData = parseSensorData(payload);
 
@@ -145,28 +137,22 @@ class _HomieScreenState extends State<HomieScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text(
-          "Homie Dashboard",
-          style: TextStyle(color: Colors.white),
-        ),
+        backgroundColor: Colors.white,
+        title: const Text("Homie Dashboard"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildSensorCard("Temperature", "$temperature °C",
-                Icons.thermostat_outlined, Colors.blueAccent),
+            _buildSensorCard("Temperature", "$temperature °C", Icons.thermostat),
             const SizedBox(height: 16),
-            _buildSensorCard(
-                "Humidity", "$humidity %", Icons.water_drop, Colors.lightBlue),
+            _buildSensorCard("Humidity", "$humidity %", Icons.water_drop),
             const SizedBox(height: 16),
-            _buildSensorCard("Light Intensity", "$lightIntensity Lux",
-                Icons.lightbulb, Colors.yellowAccent),
+            _buildSensorCard("Light Intensity", "$lightIntensity Lux", Icons.light_mode),
             const SizedBox(height: 32),
             const Text(
               "LED Control",
-              style: TextStyle(fontSize: 22, color: Colors.white),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -190,7 +176,7 @@ class _HomieScreenState extends State<HomieScreen> {
             Center(
               child: Text(
                 "LED Status: $ledStatus",
-                style: const TextStyle(fontSize: 18, color: Colors.white),
+                style: const TextStyle(fontSize: 18),
               ),
             ),
           ],
@@ -199,21 +185,13 @@ class _HomieScreenState extends State<HomieScreen> {
     );
   }
 
-  Widget _buildSensorCard(
-      String title, String value, IconData icon, Color iconColor) {
+  Widget _buildSensorCard(String title, String value, IconData icon) {
     return Card(
-      color: const Color(0xFF1D1F33),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        leading: Icon(icon, size: 40, color: iconColor),
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 18, color: Colors.white),
-        ),
-        subtitle: Text(
-          value,
-          style: const TextStyle(fontSize: 16, color: Colors.white54),
-        ),
+        leading: Icon(icon, size: 40, color: Colors.blue),
+        title: Text(title, style: const TextStyle(fontSize: 18)),
+        subtitle: Text(value, style: const TextStyle(fontSize: 16)),
       ),
     );
   }
