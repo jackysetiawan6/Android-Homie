@@ -18,11 +18,9 @@ class HomieApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'Homie Dashboard',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blueAccent,
-        ),
+        primarySwatch: Colors.indigo,
       ),
       home: const HomieScreen(),
     );
@@ -40,8 +38,9 @@ class _HomieScreenState extends State<HomieScreen> {
   String temperature = "Gathering information...";
   String humidity = "Gathering information...";
   String lightIntensity = "Gathering information...";
-  String ledState = "Unknown"; // Tracks the actual LED state (ON/OFF)
-  int ledControlMode = -1; // -1: AUTO, 0: OFF, 1: ON (Controlled by app)
+  String ledState = "Unknown";
+  int ledControlMode = -1;
+  bool isDark = false;
 
   late MqttServerClient client;
   final String mqttEndpoint = "a1kwmoq0xfo7wp-ats.iot.us-east-1.amazonaws.com";
@@ -144,6 +143,7 @@ class _HomieScreenState extends State<HomieScreen> {
       humidity = jsonData['Humidity'] != null ? "${jsonData['Humidity']}%" : "No data found";
       lightIntensity = jsonData['Light'] != null ? "${jsonData['Light']} Lux" : "No data found";
       ledState = jsonData['LED_State'] == 1 ? "ON" : "OFF";
+      isDark = jsonData['Light'] < 800;
     });
   }
 
@@ -172,59 +172,59 @@ class _HomieScreenState extends State<HomieScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text("Home Dashboard"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            SensorCard("Temperature", temperature, Icons.thermostat),
-            const SizedBox(height: 16),
-            SensorCard("Humidity", humidity, Icons.water_drop),
-            const SizedBox(height: 16),
-            SensorCard("Light Intensity", lightIntensity, Icons.light_mode),
-            const SizedBox(height: 32),
-            const Text(
-              "LED Control",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    _setLedControlMode(1);
-                    _publishLedControl(1);
-                  },
-                  child: const Text("Turn ON"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _setLedControlMode(0);
-                    _publishLedControl(0);
-                  },
-                  child: const Text("Turn OFF"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _setLedControlMode(-1);
-                    _publishLedControl(-1);
-                  },
-                  child: const Text("AUTO"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                "LED State: $ledState (Mode: ${_ledControlModeText()})",
-                style: const TextStyle(fontSize: 18),
+      backgroundColor: Colors.indigo.shade50,
+      body: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.only(top: 18, left: 24, right: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Homie IoT Dashboard",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'Overpass',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(Icons.light_mode, color: Colors.indigo, size: 20),
+                ],
               ),
-            ),
-          ],
+              Expanded(
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SensorCard('Temperature', temperature, Icons.thermostat_outlined, null),
+                        SensorCard('Humidity', humidity, Icons.water_drop_outlined, null),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SensorCard("Light Intensity", lightIntensity, Icons.light_mode_outlined, null),
+                        SensorCard("LED", ledState, ledState == "ON" ? Icons.flash_on_outlined : Icons.flashlight_off_outlined, null),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'HISTORICAL GRAPH',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -247,17 +247,36 @@ class SensorCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
+  final Color color = Colors.white;
+  final Color fontColor = Colors.grey;
+  final VoidCallback? onTap;
 
-  const SensorCard(this.title, this.value, this.icon, {super.key});
+  const SensorCard(this.title, this.value, this.icon, this.onTap, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(icon, size: 40, color: Colors.blue),
-        title: Text(title, style: const TextStyle(fontSize: 18)),
-        subtitle: Text(value, style: const TextStyle(fontSize: 16)),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon),
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: fontColor)),
+          ],
+        ),
       ),
     );
   }
