@@ -40,8 +40,8 @@ class _HomieScreenState extends State<HomieScreen> {
   String temperature = "Gathering information...";
   String humidity = "Gathering information...";
   String lightIntensity = "Gathering information...";
-  String ledState = "Unknown"; // Tracks the actual LED state (ON/OFF)
-  int ledControlMode = -1; // -1: AUTO, 0: OFF, 1: ON (Controlled by app)
+  String ledState = "Unknown";
+  int ledControlMode = -1;
 
   late MqttServerClient client;
   final String mqttEndpoint = "a1kwmoq0xfo7wp-ats.iot.us-east-1.amazonaws.com";

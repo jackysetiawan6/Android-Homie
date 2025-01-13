@@ -43,7 +43,6 @@ class _HomieScreenState extends State<HomieScreen> {
   String humidity = "Gathering...";
   String lightIntensity = "Gathering...";
   String ledState = "Unknown";
-  int ledControl = -1;
 
   final List<double> tempData = [];
   final List<double> humData = [];
@@ -145,12 +144,12 @@ class _HomieScreenState extends State<HomieScreen> {
       lightIntensity = jsonData['Light'] != null
           ? "${jsonData['Light']} Lux"
           : "Gathering...";
-      ledState = ledControl == -1 ? ("${jsonData['LED_State'] ? "ON" : "OFF"} (Auto)") : ledState;
+      ledState = jsonData['LED_State'] == 1 ? "ON" : "OFF";
     });
   }
 
   void _updateGraphValues(Map<String, dynamic> jsonData) {
-    counter = (counter + 1) % 1;
+    counter = (counter + 1) % 6;
     if (counter == 0) {
       _addToGraph(tempData, _tryParseSensorValue(temperature));
       _addToGraph(humData, _tryParseSensorValue(humidity));
@@ -179,34 +178,6 @@ class _HomieScreenState extends State<HomieScreen> {
     setState(() {
       temperature = humidity = lightIntensity = ledState = "Gathering...";
     });
-  }
-
-  void _toggleLEDControl() {
-    final nextState = (ledControl + 1) % 2 - 1;
-    setState(() {
-      ledControl = nextState + 1;
-      switch (ledControl) {
-        case 1:
-          ledState = "ON (Manual)";
-          break;
-        case 0:
-          ledState = "OFF (Manual)";
-          break;
-        default:
-          ledState = "Auto";
-      }
-    });
-
-    final message = json.encode({"LED_Override": ledControl});
-    final builder = MqttClientPayloadBuilder();
-    builder.addString(message);
-
-    try {
-      client.publishMessage("sensor_override_group_03", MqttQos.atMostOnce, builder.payload!);
-      debugPrint("Published LED state: $message");
-    } catch (e) {
-      debugPrint("Failed to publish LED state: $e");
-    }
   }
 
   @override
@@ -300,10 +271,7 @@ class _HomieScreenState extends State<HomieScreen> {
           children: [
             Expanded(child: SensorCard(title: 'Light Intensity', value: lightIntensity, iconData: Icons.light_mode_outlined)),
             const SizedBox(width: 16),
-            Expanded(child: GestureDetector(
-              onTap: _toggleLEDControl,
-              child: SensorCard(title: 'LED', value: ledState, iconData: Icons.flashlight_off_outlined),
-            )),
+            Expanded(child: SensorCard(title: 'LED', value: ledState, iconData: Icons.flashlight_off_outlined)),
           ],
         ),
       ],
@@ -413,7 +381,7 @@ class CustomChart extends StatelessWidget {
                 return Container(
                   padding: const EdgeInsets.fromLTRB(0, 5, 0, 0),
                   child: Text((value.toInt() + 1).toString(), style: const TextStyle(fontSize: 12, fontFamily: 'Overpass')
-                ),
+                  ),
                 );
               },
             ),
@@ -452,12 +420,12 @@ class CustomChart extends StatelessWidget {
 
   LineChartBarData _buildLineBarData(List<double> data, Color color) {
     return LineChartBarData(
-      spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-      isCurved: true,
-      color: color,
-      barWidth: 3,
-      isStrokeCapRound: true,
-      show: true
+        spots: data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+        isCurved: true,
+        color: color,
+        barWidth: 3,
+        isStrokeCapRound: true,
+        show: true
     );
   }
 }
