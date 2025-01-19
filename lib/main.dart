@@ -158,7 +158,7 @@ class _HomieScreenState extends State<HomieScreen> {
   }
 
   void _updateGraphValues(Map<String, dynamic> jsonData) {
-    counter = (counter + 1) % 1;
+    counter = (counter + 1) % 5;
     if (counter == 0) {
       _addToGraph(tempData, _tryParseSensorValue(temperature));
       _addToGraph(humData, _tryParseSensorValue(humidity));
@@ -169,7 +169,7 @@ class _HomieScreenState extends State<HomieScreen> {
   void _addToGraph(List<double> data, double? value) {
     if (value != null) {
       data.add(double.parse(value.toStringAsFixed(1)));
-      if (data.length > 12) data.removeAt(0);
+      if (data.length > 10) data.removeAt(0);
     }
   }
 
