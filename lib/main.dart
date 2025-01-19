@@ -201,7 +201,7 @@ class _HomieScreenState extends State<HomieScreen> {
           ledState = "OFF (Manual)";
           break;
         default:
-          ledState = "Gathering...";
+          ledState = "Auto";
       }
     });
 
@@ -340,6 +340,7 @@ class _HomieScreenState extends State<HomieScreen> {
           ),
         ],
       ),
+      clipBehavior: Clip.hardEdge,
       child: tempData.isEmpty
           ? const Center(
         child: Text(
@@ -402,7 +403,7 @@ class SensorCard extends StatelessWidget {
 }
 
 class ThemeNotifier {
-  static final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+  static final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
 
   static void toggleTheme() {
     themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
@@ -453,7 +454,7 @@ class CustomChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
+              reservedSize: 35,
               interval: 10,
               getTitlesWidget: (value, meta) {
                 if (value % 10 == 0 && value >= 0 && value <= 100) {
