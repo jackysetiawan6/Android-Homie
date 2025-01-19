@@ -17,11 +17,18 @@ class HomieApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Homie Monitoring System',
-      theme: ThemeData(primarySwatch: Colors.indigo),
-      home: const HomieScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeNotifier.themeModeNotifier,
+      builder: (context, themeMode, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Homie Monitoring System',
+          theme: ThemeData(primarySwatch: Colors.indigo, brightness: Brightness.light),
+          darkTheme: ThemeData(primarySwatch: Colors.indigo, brightness: Brightness.dark),
+          themeMode: themeMode,
+          home: const HomieScreen(),
+        );
+      },
     );
   }
 }
@@ -145,7 +152,8 @@ class _HomieScreenState extends State<HomieScreen> {
       lightIntensity = jsonData['Light'] != null
           ? "${jsonData['Light']} Lux"
           : "Gathering...";
-      ledState = ledControl == -1 ? ("${jsonData['LED_State'] ? "ON" : "OFF"} (Auto)") : ledState;
+      // ledState = ledControl == -1 ? ("${jsonData['LED_State'] ? "ON" : "OFF"} (Auto)") : ledState;
+      ledState = ledControl == -1 ? "Auto" : ledState;
     });
   }
 
@@ -182,9 +190,9 @@ class _HomieScreenState extends State<HomieScreen> {
   }
 
   void _toggleLEDControl() {
-    final nextState = (ledControl + 1) % 2 - 1;
+    final nextState = (ledControl + 2) % 3 - 1;
     setState(() {
-      ledControl = nextState + 1;
+      ledControl = nextState;
       switch (ledControl) {
         case 1:
           ledState = "ON (Manual)";
@@ -193,7 +201,7 @@ class _HomieScreenState extends State<HomieScreen> {
           ledState = "OFF (Manual)";
           break;
         default:
-          ledState = "Auto";
+          ledState = "Gathering...";
       }
     });
 
@@ -212,7 +220,7 @@ class _HomieScreenState extends State<HomieScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.indigo.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -235,7 +243,7 @@ class _HomieScreenState extends State<HomieScreen> {
               Container(
                 padding: const EdgeInsets.only(top: 16, left: 24, right: 24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
                   boxShadow: [
                     BoxShadow(
@@ -263,10 +271,10 @@ class _HomieScreenState extends State<HomieScreen> {
   }
 
   Widget _buildHeader() {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
+        const Text(
           "Homie Monitoring System",
           style: TextStyle(
             fontSize: 18,
@@ -276,9 +284,17 @@ class _HomieScreenState extends State<HomieScreen> {
         ),
         Row(
           children: [
-            Icon(Icons.light_mode_outlined, color: Colors.indigoAccent, size: 20),
-            SizedBox(width: 8),
-            Icon(Icons.info_outline, color: Colors.indigoAccent, size: 20),
+            GestureDetector(
+              onTap: ThemeNotifier.toggleTheme,
+              child: Icon(
+                ThemeNotifier.themeModeNotifier.value == ThemeMode.light
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+                color: Colors.indigoAccent,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 8),
           ],
         ),
       ],
@@ -290,7 +306,7 @@ class _HomieScreenState extends State<HomieScreen> {
       children: [
         Row(
           children: [
-            Expanded(child: SensorCard(title: 'Temperature', value: temperature, iconData: Icons.hot_tub_outlined)),
+            Expanded(child: SensorCard(title: 'Temperature', value: temperature, iconData: Icons.thermostat_outlined)),
             const SizedBox(width: 16),
             Expanded(child: SensorCard(title: 'Humidity', value: humidity, iconData: Icons.water_drop_outlined)),
           ],
@@ -302,7 +318,7 @@ class _HomieScreenState extends State<HomieScreen> {
             const SizedBox(width: 16),
             Expanded(child: GestureDetector(
               onTap: _toggleLEDControl,
-              child: SensorCard(title: 'LED', value: ledState, iconData: Icons.flashlight_off_outlined),
+              child: SensorCard(title: 'LED', value: ledState, iconData: ledState.contains('ON') ? Icons.flashlight_on_outlined : Icons.flashlight_off_outlined),
             )),
           ],
         ),
@@ -314,7 +330,7 @@ class _HomieScreenState extends State<HomieScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(15, 25, 25, 15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
@@ -330,7 +346,7 @@ class _HomieScreenState extends State<HomieScreen> {
           "Gathering...",
           style: TextStyle(
             fontFamily: 'Overpass',
-            color: Colors.indigo,
+            color: Colors.indigoAccent,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -349,10 +365,13 @@ class SensorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = Theme.of(context).cardColor;
+    final iconColor = Theme.of(context).iconTheme.color;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -365,20 +384,30 @@ class SensorCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(iconData, color: Colors.indigo, size: 32),
+          Icon(iconData, color: iconColor, size: 32),
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Overpass', color: Colors.black),
+            style: const TextStyle(fontSize: 14, fontFamily: 'Overpass'),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontFamily: 'Overpass', color: Colors.indigo),
+            style: const TextStyle(fontSize: 16, fontFamily: 'Overpass', color: Colors.indigoAccent),
           ),
         ],
       ),
     );
+  }
+}
+
+class ThemeNotifier {
+  static final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.light);
+
+  static void toggleTheme() {
+    themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light
+        ? ThemeMode.dark
+        : ThemeMode.light;
   }
 }
 
@@ -396,9 +425,10 @@ class CustomChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return LineChart(
       LineChartData(
-        gridData: const FlGridData(show: false),
+        gridData: FlGridData(show: false),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
@@ -408,28 +438,31 @@ class CustomChart extends StatelessWidget {
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true, reservedSize: 22, interval: 1,
-              getTitlesWidget: (value, meta) {
-                return Container(
-                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 0),
-                  child: Text((value.toInt() + 1).toString(), style: const TextStyle(fontSize: 12, fontFamily: 'Overpass')
+              showTitles: true,
+              reservedSize: 30,
+              interval: 1,
+              getTitlesWidget: (value, meta) => Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  (value.toInt() + 1).toString(),
+                  style: TextStyle(fontSize: 12, fontFamily: 'Overpass'),
                 ),
-                );
-              },
+              ),
             ),
           ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true, reservedSize: 35, interval: 10,
+              showTitles: true,
+              reservedSize: 40,
+              interval: 10,
               getTitlesWidget: (value, meta) {
                 if (value % 10 == 0 && value >= 0 && value <= 100) {
                   return Container(
+                    padding: EdgeInsets.only(right: 12),
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
                     child: Text(
                       value.toInt().toString(),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 12, fontFamily: 'Overpass'),
+                      style: TextStyle(fontSize: 12, fontFamily: 'Overpass'),
                     ),
                   );
                 }
